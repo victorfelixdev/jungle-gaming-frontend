@@ -1,0 +1,88 @@
+@import "@fontsource/roboto-mono/400.css";
+@import "@fontsource/roboto-mono/500.css";
+@import "@fontsource/roboto-mono/700.css";
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  font-family: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: #140d0a;
+  color: #f5f1eb;
+  --secondary: #B39463;
+  --background: #140d0a;
+  --surface: #38220f;
+  --surface-card: #241612;
+  --surface-raised: #2f1d15;
+  --surface-hover: #3a2419;
+  --foreground: #f5f1eb;
+  --muted-foreground: #cfb28c;
+  --border: #3f2319;
+  --accent: #e89b55;
+  --accent-hover: #f0ad6b;
+  --primary: #d28a4c;
+  --accent-foreground: #140d0a;
+  --ring: rgb(232 155 85 / 75%);
+  --danger: #f09885;
+}
+
+* { box-sizing: border-box; }
+html { background: var(--background); }
+body { min-width: 320px; margin: 0; }
+button, input, select, textarea { font: inherit; }
+.auth-modal-tabs button { font-weight: 700; }
+.auth-modal-forgot { font-size: 12px; }
+.auth-modal-submit { font-size: 14px; font-weight: 700; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+.checkout-wallet-checkbox {
+  appearance: none;
+  display: grid;
+  width: 14px;
+  height: 14px;
+  flex: none;
+  place-items: center;
+  border: 1px solid var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.checkout-wallet-checkbox::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  transform: scale(0);
+}
+.checkout-wallet-checkbox:checked::after { transform: scale(1); }
+.checkout-wallet-checkbox:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+.cart-desktop-coupon input { font-size: 12px; }
+.cart-desktop-coupon button { font-size: 16px; font-weight: 700; }
+a { text-decoration: none; }
+img { display: block; max-width: 100%; }
+::selection { background: rgb(210 138 76 / 35%); }
+@media (prefers-reduced-motion: no-preference) { .shimmer { background-size: 200% 100%; animation: shimmer 1.6s linear infinite; } }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+.catalog-price-range {
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+.catalog-price-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--background);
+  border-radius: 50%;
+  background: var(--primary);
+  pointer-events: auto;
+  cursor: grab;
+}
+.catalog-price-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--background);
+  border-radius: 50%;
+  background: var(--primary);
+  pointer-events: auto;
+  cursor: grab;
+}
