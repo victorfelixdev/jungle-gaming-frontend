@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   nftFacetsQueryOptions,
@@ -13,6 +13,8 @@ import { DropdownSelect } from "@/components/ui/dropdown-select";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeFooter } from "./home-footer";
+import { useDialogFocus } from "@/lib/use-dialog-focus";
+import { cn } from "@/lib/utils";
 
 const categories = [
   { label: "Arte digital", value: "Arte" },
@@ -89,6 +91,9 @@ export function CatalogPage() {
   });
   const facets = useQuery(nftFacetsQueryOptions);
   const featured = useQuery(nftQueryOptions("violet-nomad-314"));
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersRef = useRef<HTMLElement>(null);
+  useDialogFocus(filtersRef, filtersOpen, () => setFiltersOpen(false));
   const restoredScroll = useRef(false);
   useEffect(() => {
     if (!result.data || restoredScroll.current) return;
@@ -127,8 +132,33 @@ export function CatalogPage() {
       <SearchForm
         search={search.query}
         onSearch={(query) => setSearch({ query })}
+        onFilter={() => setFiltersOpen(true)}
         className="md:hidden"
       />
+      {filtersOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70" onMouseDown={(event) => { if (event.target === event.currentTarget) setFiltersOpen(false); }}>
+          <section ref={filtersRef} role="dialog" aria-modal="true" aria-labelledby="mobile-filters-title" className="ml-auto flex h-dvh w-full max-w-[390px] flex-col overflow-y-auto bg-[var(--surface-card)] px-6 pb-8 pt-5 md:hidden">
+            <div className="flex items-center justify-between">
+              <h2 id="mobile-filters-title" className="text-lg font-bold">Filtros</h2>
+              <button type="button" aria-label="Fechar filtros" onClick={() => setFiltersOpen(false)} className="grid size-10 place-items-center"><X size={20} /></button>
+            </div>
+            <h3 className="mt-6 text-base font-bold">Coleções</h3>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {categories.map((category) => <button key={category.value} type="button" aria-pressed={Boolean(search.categories?.includes(category.value))} onClick={() => toggleCategory(category.value)} className={`rounded border px-3 py-2 text-left text-xs ${search.categories?.includes(category.value) ? "border-[var(--primary)] text-[var(--accent)]" : "border-[var(--border)] text-[var(--muted-foreground)]"}`}>{category.label} ({facets.data?.categories[category.value] ?? 0})</button>)}
+            </div>
+            <PriceFilter key={`${search.minPrice ?? "default"}-${search.maxPrice ?? "default"}`} initialMin={search.minPrice ?? 0.02} initialMax={search.maxPrice ?? 12.3} onApply={(minPrice, maxPrice) => setSearch({ minPrice, maxPrice })} />
+            <h3 className="mt-7 text-base font-bold">Rede</h3>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {networks.map((network) => <button key={network.value} type="button" aria-pressed={Boolean(search.networks?.includes(network.value))} onClick={() => toggleNetwork(network.value)} className={`rounded border px-3 py-2 text-left text-xs ${search.networks?.includes(network.value) ? "border-[var(--primary)] text-[var(--accent)]" : "border-[var(--border)] text-[var(--muted-foreground)]"}`}>{network.label} ({facets.data?.networks[network.value] ?? 0})</button>)}
+            </div>
+            <div className="mt-7"><SortDropdown value={search.sort} onChange={(sort) => setSearch({ sort })} mobile /></div>
+            <div className="mt-auto flex gap-3 pt-8">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setSearch({ categories: undefined, networks: undefined, minPrice: undefined, maxPrice: undefined })}>Limpar</Button>
+              <Button type="button" className="flex-1" onClick={() => setFiltersOpen(false)}>Ver resultados</Button>
+            </div>
+          </section>
+        </div>
+      )}
       <Hero />
 
       <section
@@ -238,7 +268,7 @@ export function CatalogPage() {
               <SearchForm
                 search={search.query}
                 onSearch={(query) => setSearch({ query })}
-                className="hidden md:flex"
+                className="hidden gap-2 md:flex"
               />
               <SortDropdown value={search.sort} onChange={(sort) => setSearch({ sort })} />
             </div>
@@ -415,9 +445,9 @@ export function CatalogPage() {
   );
 }
 
-function SortDropdown({ value, onChange }: { value: NftSort; onChange: (value: NftSort) => void }) {
+function SortDropdown({ value, onChange, mobile = false }: { value: NftSort; onChange: (value: NftSort) => void; mobile?: boolean }) {
   return (
-    <div className="hidden items-center gap-2 text-xs text-[var(--muted-foreground)] md:flex">
+    <div className={`${mobile ? "flex" : "hidden md:flex"} items-center gap-2 text-xs text-[var(--muted-foreground)]`}>
       <span>Ordenar</span>
       <DropdownSelect
         value={value}
@@ -626,15 +656,17 @@ function Hero() {
 function SearchForm({
   search,
   onSearch,
+  onFilter,
   className,
 }: {
   search?: string;
   onSearch: (query?: string) => void;
+  onFilter?: () => void;
   className?: string;
 }) {
   return (
     <form
-      className={`mb-4 gap-2 flex md:hidden ${className ?? ""}`}
+      className={cn("mb-4 flex gap-2 md:hidden", className)}
       onSubmit={(event) => {
         event.preventDefault();
         const value = new FormData(event.currentTarget).get("query");
@@ -652,12 +684,13 @@ function SearchForm({
         className="min-w-0"
       />
       <Button
-        type="submit"
+        type={onFilter ? "button" : "submit"}
         size="icon"
-        aria-label="Buscar"
+        aria-label={onFilter ? "Abrir filtros" : "Buscar"}
+        onClick={onFilter}
         className="search-button rounded-[14px]"
       >
-        <img src="/assets/figma/filter.svg" alt="Filtro" />
+        {onFilter ? <img src="/assets/figma/filter.svg" alt="" /> : <Search size={18} aria-hidden="true" />}
       </Button>
     </form>
   );

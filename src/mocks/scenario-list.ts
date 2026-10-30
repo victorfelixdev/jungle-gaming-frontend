@@ -11,10 +11,13 @@ export const mockScenarios = [
   { id: "expired-session", label: "Sessão expirada", description: "Login expira após cinco segundos." },
   { id: "registration-conflict", label: "Conflito de cadastro", description: "Cadastro retorna erro 409." },
   { id: "expired-coupon", label: "Cupom expirado", description: "JUNGLE10 retorna conflito." },
+  { id: "favorite-error", label: "Erro ao favoritar", description: "Inclusão e remoção de favoritos falham após um atraso curto." },
   { id: "price-changed", label: "Preço alterado", description: "Emerald Ape 1/50 custa 1.49 ETH." },
   { id: "edition-sold-out", label: "Edição esgotada", description: "Emerald Ape 1/50 está indisponível." },
   { id: "order-timeout", label: "Timeout após pedido", description: "Pedido é criado, mas a primeira resposta falha." },
+  { id: "order-pending", label: "Pedido pendente", description: "Pedido aguarda conclusão; finalize pelo endpoint de controle." },
   { id: "payment-declined", label: "Pagamento recusado", description: "Pedido é registrado como recusado." },
+  { id: "wallet-disconnected", label: "Carteira desconectada", description: "Envio do pedido falha antes de criar a compra." },
 ] as const;
 
 export type MockScenario = (typeof mockScenarios)[number]["id"];

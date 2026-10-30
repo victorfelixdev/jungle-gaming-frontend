@@ -1,42 +1,54 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useParams } from "@tanstack/react-router";
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { X } from "lucide-react";
-import type { Nft, Order, Wallet } from "@/api/contracts";
+import { useRef } from "react";
+import type { Order, Wallet } from "@/api/contracts";
 import { apiClient } from "@/api/client";
+import { getApiError } from "@/api/error";
 import { orderQueryKey, useSession, walletsQueryKey } from "@/features/auth/session";
+import { useDialogFocus } from "@/lib/use-dialog-focus";
 
 export function OrderReceiptPage() {
   const { orderId } = useParams({ from: "/order/$orderId" });
+  const navigate = useNavigate();
+  const dialogRef = useRef<HTMLElement>(null);
   const session = useSession();
   const order = useQuery({
     queryKey: orderQueryKey(session.data?.user.id, orderId),
     enabled: Boolean(session.data),
     queryFn: async () =>
       (await apiClient.get<Order>(`/orders/${orderId}`)).data,
-  });
-  const nfts = useQuery({
-    queryKey: ["receipt-nfts"],
-    queryFn: async () =>
-      (await apiClient.get<{ items: Nft[] }>("/nfts?pageSize=24")).data.items,
+    refetchInterval: (query) => query.state.data?.status === "pending" ? 2_000 : false,
+    refetchOnWindowFocus: "always",
   });
   const wallets = useQuery({
     queryKey: walletsQueryKey(session.data?.user.id),
     enabled: Boolean(order.data),
     queryFn: async () => (await apiClient.get<Wallet[]>("/wallets")).data,
   });
+  useDialogFocus(dialogRef, Boolean(order.data), () => void navigate({ to: "/", search: { page: 1, pageSize: 9, sort: "featured" } }));
   if (order.isPending)
     return (
       <main className="mx-auto max-w-[800px] px-6 py-16">
         Carregando pedido...
       </main>
     );
-  if (order.isError || !order.data)
+  if (order.isError)
+    return (
+      <main className="mx-auto max-w-[800px] px-6 py-16">
+        <h1 className="text-xl font-bold">Não foi possível consultar o pedido.</h1>
+        <p role="alert" className="mt-2 text-sm text-[var(--danger)]">{getApiError(order.error).message}</p>
+        <button type="button" onClick={() => void order.refetch()} className="mt-5 rounded bg-[var(--primary)] px-4 py-2 text-sm text-[var(--background)]">Tentar novamente</button>
+      </main>
+    );
+  if (!order.data)
     return (
       <main className="mx-auto max-w-[800px] px-6 py-16">
         <h1 className="text-3xl font-bold">Pedido não encontrado</h1>
       </main>
     );
   const confirmed = order.data.status === "confirmed";
+  const pending = order.data.status === "pending";
   const wallet = wallets.data?.find(({ id }) => id === order.data.walletId);
   const marketplace = {
     to: "/" as const,
@@ -46,6 +58,7 @@ export function OrderReceiptPage() {
     <main className="min-h-dvh bg-[var(--background)]">
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgb(10_6_4_/_75%)] p-4 md:bg-[var(--background)]">
         <section
+          ref={dialogRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby="receipt-title"
@@ -59,20 +72,19 @@ export function OrderReceiptPage() {
             <X size={18} />
           </Link>
           <header className="flex flex-col items-center border-b border-[var(--primary)] px-4 pb-4 pt-5 text-center">
-            <img src="/assets/figma/thank-you.svg" alt="" width="80" height="80" />
+            {confirmed ? <img src="/assets/figma/thank-you.svg" alt="" width="80" height="80" /> : <span aria-hidden="true" className="grid size-20 place-items-center rounded-full border border-[var(--primary)] text-3xl text-[var(--accent)]">{pending ? "…" : "×"}</span>}
             <h1
               id="receipt-title"
+              aria-live="polite"
               className="mt-3 text-xs font-bold text-[var(--muted-foreground)]"
             >
-              {confirmed
-                ? "Seus NFTs agora estão na sua carteira"
-                : "Pedido em processamento"}
+              {confirmed ? "Seus NFTs agora estão na sua carteira" : pending ? "Pedido em processamento" : "Pagamento recusado"}
             </h1>
           </header>
           <dl className="grid grid-cols-2 gap-3 border-b border-[var(--primary)] px-4 py-3 text-[10px] text-[var(--muted-foreground)] md:grid-cols-4 md:gap-0 md:[&>div+div]:border-l md:[&>div+div]:border-[var(--border)] md:[&>div+div]:pl-2">
             <div className="min-w-0">
               <dt>ID da transação</dt>
-              <dd className="truncate">{order.data.transactionId}</dd>
+              <dd className="truncate">{order.data.transactionId || (pending ? "Aguardando confirmação" : "Não gerada")}</dd>
             </div>
             <div>
               <dt>Data</dt>
@@ -99,20 +111,22 @@ export function OrderReceiptPage() {
               <span className="text-right">Subtotal</span>
             </div>
             <div className="mt-2 grid gap-3">
-              {order.data.items.map((item) => {
-                const nft = nfts.data?.find(({ id }) => id === item.nftId);
-                const edition = nft?.editions.find(
-                  ({ id }) => id === item.editionId,
-                );
+              {(order.data.lines ?? order.data.items.map((item) => ({
+                ...item,
+                nftName: item.nftId,
+                editionName: item.editionId,
+                imageUrl: "",
+                subtotal: "—",
+              }))).map((item) => {
                 return (
                   <div
                     key={item.id}
                     className="grid grid-cols-[1fr_50px_80px] items-center gap-1 text-[11px]"
                   >
                     <div className="flex min-w-0 items-center gap-2">
-                      {nft ? (
+                      {item.imageUrl ? (
                         <img
-                          src={nft.imageUrl}
+                          src={item.imageUrl}
                           alt=""
                           className="size-10 shrink-0 rounded object-cover"
                         />
@@ -121,10 +135,10 @@ export function OrderReceiptPage() {
                       )}
                       <div className="min-w-0">
                         <strong className="block truncate">
-                          {nft?.name ?? item.nftId}
+                          {item.nftName}
                         </strong>
                         <span className="block truncate text-[10px] text-[var(--muted-foreground)]">
-                          {edition?.name ?? item.editionId}
+                          {item.editionName}
                         </span>
                       </div>
                     </div>
@@ -132,9 +146,7 @@ export function OrderReceiptPage() {
                       × {item.quantity}
                     </span>
                     <strong className="text-right text-[var(--accent)]">
-                      {edition
-                        ? (Number(edition.price) * item.quantity).toFixed(2)
-                        : "—"}{" "}
+                      {item.subtotal}{" "}
                       ETH
                     </strong>
                   </div>
@@ -162,9 +174,9 @@ export function OrderReceiptPage() {
             <p className="mt-3 text-center text-[11px] leading-5 text-[var(--muted-foreground)]">
               {confirmed
                 ? "Compra confirmada. Seus NFTs foram associados à carteira selecionada."
-                : "Aguardando a confirmação da transação."}
+                : pending ? "Aguardando a confirmação da transação. Esta tela atualiza o estado automaticamente." : "A compra foi recusada. Os itens continuam no seu carrinho."}
             </p>
-            {import.meta.env.VITE_ENABLE_MSW === "false" ? (
+            {confirmed && (import.meta.env.VITE_ENABLE_MSW === "false" ? (
               <a
                 href={`https://etherscan.io/tx/${order.data.transactionId}`}
                 target="_blank"
@@ -182,7 +194,7 @@ export function OrderReceiptPage() {
               >
                 Ver no Etherscan
               </button>
-            )}
+            ))}
           </div>
         </section>
       </div>

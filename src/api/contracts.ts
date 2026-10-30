@@ -133,6 +133,18 @@ export interface Wallet {
 
 export type OrderStatus = "pending" | "confirmed" | "declined";
 
+export interface OrderLineItem {
+  id: string;
+  nftId: string;
+  editionId: string;
+  quantity: number;
+  nftName: string;
+  imageUrl: string;
+  editionName: string;
+  unitPrice: EthAmount;
+  subtotal: EthAmount;
+}
+
 export interface Order {
   id: string;
   walletId?: string;
@@ -140,6 +152,7 @@ export interface Order {
   status: OrderStatus;
   transactionId: string;
   items: CartItem[];
+  lines?: OrderLineItem[];
   quote: Quote;
   idempotencyKey: string;
   createdAt: string;

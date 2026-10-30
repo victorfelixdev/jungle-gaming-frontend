@@ -15,6 +15,8 @@ import type { MockOrder } from "./state";
 import { users as fixtureUsers } from "./fixtures";
 import { hashPassword, newPasswordSalt } from "./password";
 import { applyMockNetwork, getMockScenario, mockScenarios, resetNetworkCounters, setMockScenario, type MockScenario } from "./scenarios";
+import { publishNftUpdated, publishOrderUpdated, setRealtimeOnline } from "./realtime";
+import type { NftUpdatedEvent, OrderUpdatedEvent } from "@/api/realtime";
 
 const api = "/api";
 const withNetwork = (resolver: HttpResponseResolver): HttpResponseResolver => async (info) => {
@@ -71,6 +73,16 @@ const fromWei = (value: bigint) => {
     .replace(/0+$/, "");
   return fraction ? `${whole}.${fraction}` : `${whole}`;
 };
+const consumeOrderItems = (userId: string, items: MockOrder["items"]) => {
+  const cart = mockState.cartFor(userId);
+  for (const purchased of items) {
+    const index = cart.items.findIndex(({ id }) => id === purchased.id);
+    if (index < 0) continue;
+    cart.items[index].quantity -= purchased.quantity;
+    if (cart.items[index].quantity <= 0) cart.items.splice(index, 1);
+  }
+  cart.version++;
+};
 const quoteFor = (userId: string, coupon?: string): Quote | ApiError => {
   const cart = mockState.cartFor(userId);
   let subtotal = 0n;
@@ -112,12 +124,35 @@ export const handlers = [
     setMockScenario(scenario as MockScenario);
     mockState.reset();
     resetNetworkCounters();
+    setRealtimeOnline(true);
     return HttpResponse.json({ current: getMockScenario() });
   }),
   http.post(`${api}/mock/reset`, () => {
     mockState.reset();
     resetNetworkCounters();
+    setRealtimeOnline(true);
     return HttpResponse.json({ current: getMockScenario() });
+  }),
+  http.put(`${api}/mock/realtime`, async ({ request }) => {
+    const { connected } = await request.json() as { connected: boolean };
+    if (typeof connected !== "boolean") return error(422, "VALIDATION_ERROR", "Informe connected como booleano.");
+    setRealtimeOnline(connected);
+    return HttpResponse.json({ connected });
+  }),
+  http.post(`${api}/mock/events`, async ({ request }) => {
+    const input = await request.json() as { event: string; payload: unknown };
+    if (input.event === "nft.updated") {
+      const payload = input.payload as NftUpdatedEvent;
+      if (!payload || typeof payload.id !== "string" || !Number.isInteger(payload.version) || payload.nft?.id !== payload.id)
+        return error(422, "VALIDATION_ERROR", "Evento NFT inválido.");
+      publishNftUpdated(payload);
+    } else if (input.event === "order.updated") {
+      const payload = input.payload as OrderUpdatedEvent;
+      if (!payload || typeof payload.id !== "string" || typeof payload.userId !== "string" || !Number.isInteger(payload.version) || payload.order?.id !== payload.id)
+        return error(422, "VALIDATION_ERROR", "Evento de pedido inválido.");
+      publishOrderUpdated(payload);
+    } else return error(422, "VALIDATION_ERROR", "Evento desconhecido.");
+    return new HttpResponse(null, { status: 204 });
   }),
   mockHttp.get(`${api}/session`, () => {
     const session = mockState.session();
@@ -326,7 +361,28 @@ export const handlers = [
     if (input.availableQuantity !== undefined) edition.availableQuantity = input.availableQuantity;
     nft.version += 1;
     mockState.persist();
+    publishNftUpdated({ id: nft.id, version: nft.version, nft: structuredClone(nft) });
     return HttpResponse.json(nft);
+  }),
+  http.post(`${api}/mock/orders/:id/status`, async ({ params, request }) => {
+    const { status } = await request.json() as { status: string };
+    if (status !== "confirmed" && status !== "declined")
+      return error(422, "VALIDATION_ERROR", "Status inválido.");
+    const entry = Object.entries(mockState.get().ordersByUser)
+      .find(([, orders]) => orders.some(({ id }) => id === params.id));
+    const order = entry?.[1].find(({ id }) => id === params.id);
+    if (!entry || !order) return error(404, "ORDER_NOT_FOUND", "Pedido não encontrado.");
+    if (order.status !== "pending")
+      return error(409, "ORDER_TERMINAL", "O pedido já foi concluído.");
+    order.status = status;
+    order.version++;
+    if (status === "confirmed") {
+      order.transactionId = `0x${crypto.randomUUID().replaceAll("-", "")}`;
+      consumeOrderItems(entry[0], order.items);
+    }
+    mockState.persist();
+    publishOrderUpdated({ id: order.id, userId: entry[0], version: order.version, order: toPublicOrder(order) });
+    return HttpResponse.json(toPublicOrder(order));
   }),
   mockHttp.get(`${api}/favorites`, () => {
     const user = mockState.requireUser();
@@ -505,6 +561,8 @@ export const handlers = [
     if (existing) return existing.requestFingerprint === requestFingerprint
       ? HttpResponse.json(toPublicOrder(existing))
       : error(409, "IDEMPOTENCY_CONFLICT", "Esta chave já foi usada com outro pedido.");
+    if (getMockScenario() === "wallet-disconnected")
+      return error(409, "WALLET_DISCONNECTED", "A carteira foi desconectada. Conecte-a novamente antes de comprar.");
     if (!Number.isFinite(Date.parse(input.quote.expiresAt)) || Date.parse(input.quote.expiresAt) <= Date.now())
       return error(409, "STALE_QUOTE", "A cotação expirou.");
     const quote = quoteFor(user.id, input.quote.coupon);
@@ -516,14 +574,32 @@ export const handlers = [
       return error(409, "STALE_QUOTE", "A cotação foi alterada.");
     const cart = mockState.cartFor(user.id);
     if (!cart.items.length) return error(409, "EMPTY_CART", "O carrinho está vazio.");
-    const declined = getMockScenario() === "payment-declined";
+    const scenario = getMockScenario();
+    const declined = scenario === "payment-declined";
+    const pending = scenario === "order-pending";
+    const lines = cart.items.map((item) => {
+      const nft = mockState.get().nfts.find(({ id }) => id === item.nftId)!;
+      const edition = nft.editions.find(({ id }) => id === item.editionId)!;
+      return {
+        id: item.id,
+        nftId: item.nftId,
+        editionId: item.editionId,
+        quantity: item.quantity,
+        nftName: nft.name,
+        imageUrl: nft.imageUrl,
+        editionName: edition.name,
+        unitPrice: edition.price,
+        subtotal: fromWei(toWei(edition.price) * BigInt(item.quantity)),
+      };
+    });
     const order: MockOrder = {
       id: crypto.randomUUID(),
-      status: declined ? "declined" : "confirmed",
+      status: pending ? "pending" : declined ? "declined" : "confirmed",
       walletId: input.walletId,
       provider: input.provider,
-      transactionId: `0x${crypto.randomUUID().replaceAll("-", "")}`,
+      transactionId: pending || declined ? "" : `0x${crypto.randomUUID().replaceAll("-", "")}`,
       items: structuredClone(cart.items),
+      lines,
       quote,
       idempotencyKey: input.idempotencyKey,
       requestFingerprint,
@@ -531,11 +607,9 @@ export const handlers = [
       version: 1,
     };
     orders.push(order);
-    if (!declined) {
-      cart.items = [];
-      cart.version++;
-    }
+    if (!declined && !pending) consumeOrderItems(user.id, order.items);
     mockState.persist();
+    publishOrderUpdated({ id: order.id, userId: user.id, version: order.version, order: toPublicOrder(order) });
     if (getMockScenario() === "order-timeout") return HttpResponse.error();
     return HttpResponse.json(toPublicOrder(order), { status: 201 });
   }),

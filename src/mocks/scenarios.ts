@@ -26,6 +26,10 @@ export async function applyMockNetwork(request: Request) {
   if (scenario === "server-error") {
     return HttpResponse.json({ code: "SERVICE_UNAVAILABLE", message: "API temporariamente indisponível." }, { status: 503 });
   }
+  if (scenario === "favorite-error" && url.pathname.startsWith("/api/favorites/") && ["POST", "DELETE"].includes(request.method)) {
+    await delay(400);
+    return HttpResponse.json({ code: "SERVICE_UNAVAILABLE", message: "Não foi possível salvar o favorito." }, { status: 503 });
+  }
   if (scenario === "transient-error" && url.pathname === "/api/nfts" && request.method === "GET" && catalogRequests++ === 0) {
     return HttpResponse.json({ code: "SERVICE_UNAVAILABLE", message: "Falha transitória na listagem." }, { status: 503 });
   }

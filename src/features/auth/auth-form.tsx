@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import { Eye, EyeOff, X } from "lucide-react";
 import type { Credentials, RegisterInput } from "@/api/contracts";
 import { getApiError } from "@/api/error";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { clearGuestCart, getGuestCart } from "@/features/cart/local-cart";
 import { apiClient } from "@/api/client";
+import { useDialogFocus } from "@/lib/use-dialog-focus";
 
 const mobileFieldClass = "min-h-11 rounded-[9px] bg-transparent text-xs font-normal placeholder:text-[var(--muted-foreground)] md:min-h-10 md:rounded-md md:bg-[var(--surface)] md:text-sm";
 
@@ -33,14 +34,8 @@ export function AuthForm({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const isLogin = mode === "login";
-  useEffect(() => {
-    if (!modal) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose?.();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [modal, onClose]);
+  const dialogRef = useRef<HTMLElement>(null);
+  useDialogFocus(dialogRef, modal, () => onClose?.());
   const mutation = useMutation({
     mutationFn: (input: Credentials | RegisterInput) =>
       isLogin ? signIn(input) : signUp(input as RegisterInput),
@@ -60,6 +55,7 @@ export function AuthForm({
 
   const content = (
     <section
+      ref={dialogRef}
       role={modal ? "dialog" : undefined}
       aria-modal={modal || undefined}
       aria-label={modal ? (isLogin ? "Entrar" : "Criar conta") : undefined}

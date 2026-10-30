@@ -1,11 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Minus, Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Cart, Quote } from "@/api/contracts";
 import { apiClient } from "@/api/client";
 import { getApiError } from "@/api/error";
-import { nftsQueryOptions } from "@/api/nfts";
+import { nftQueryOptions } from "@/api/nfts";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeFooter } from "@/features/catalog/home-footer";
@@ -39,6 +39,7 @@ export function CartPage() {
   const [couponInput, setCouponInput] = useState(() => sessionStorage.getItem("kurio:checkout-coupon") ?? "");
   const [coupon, setCoupon] = useState(() => sessionStorage.getItem("kurio:checkout-coupon") ?? "");
   const [couponError, setCouponError] = useState("");
+  const [marketChanged, setMarketChanged] = useState(false);
   const guestItems = useGuestCart();
   const session = useSession();
   const remoteCart = useQuery({
@@ -51,11 +52,19 @@ export function CartPage() {
     enabled: Boolean(session.data && remoteCart.data?.items.length),
     queryFn: async () => (await apiClient.post<Quote>("/quotes", { coupon: coupon || undefined })).data,
   });
-  const remoteItems = remoteCart.data?.items ?? [];
-  const remoteIds = new Set(remoteItems.map(({ id }) => id));
-  const items = session.data
+  const remoteItems = useMemo(() => remoteCart.data?.items ?? [], [remoteCart.data?.items]);
+  const remoteIds = useMemo(() => new Set(remoteItems.map(({ id }) => id)), [remoteItems]);
+  const items = useMemo(() => session.data
     ? [...remoteItems, ...guestItems.filter(({ id }) => !remoteIds.has(id))]
-    : guestItems;
+    : guestItems, [session.data, remoteItems, guestItems, remoteIds]);
+  useEffect(() => {
+    const onNftUpdated = (event: Event) => {
+      const { id } = (event as CustomEvent<{ id: string }>).detail;
+      if (items.some((item) => item.nftId === id)) setMarketChanged(true);
+    };
+    window.addEventListener("kurio:nft-updated", onNftUpdated);
+    return () => window.removeEventListener("kurio:nft-updated", onNftUpdated);
+  }, [items]);
   const cartItemMutation = useMutation({
     mutationFn: async ({ id, quantity }: { id: string; quantity?: number }) => {
       if (session.data && remoteIds.has(id)) {
@@ -72,18 +81,42 @@ export function CartPage() {
       void queryClient.invalidateQueries({ queryKey: ["quote"] });
     },
   });
-  const nfts = useQuery(
-    nftsQueryOptions({ page: 1, pageSize: 24, sort: "featured" }),
-  );
-  if (nfts.isPending || session.isPending || (session.data && remoteCart.isPending))
+  const nftQueries = useQueries({ queries: items.map((item) => nftQueryOptions(item.nftId)) });
+  if (session.isPending || (session.data && remoteCart.isPending) || nftQueries.some((query) => query.isPending))
     return (
       <main className="mx-auto max-w-[1200px] px-6 py-12 md:px-0">
-        <Skeleton className="h-8 w-56" />
-        <Skeleton className="mt-6 h-72 w-full" />
+        <p role="status" className="sr-only">Carregando carrinho</p>
+        <Skeleton className="h-6 w-56" />
+        <div className="mt-6 grid gap-8 md:grid-cols-[minmax(0,1fr)_342px]">
+          <div className="grid gap-4">
+            {[0, 1, 2].map((index) => <Skeleton key={index} className="h-24 w-full" />)}
+          </div>
+          <aside className="grid content-start gap-4">
+            <Skeleton className="h-7 w-48" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-5 w-full" />
+            <Skeleton className="h-5 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </aside>
+        </div>
       </main>
     );
-  const rows = items.flatMap((item) => {
-    const nft = nfts.data?.items.find(({ id }) => id === item.nftId);
+  if (session.isError || remoteCart.isError || nftQueries.some((query) => query.isError))
+    return (
+      <main className="mx-auto max-w-[1200px] px-6 py-12 md:px-0">
+        <h1 className="text-xl font-bold">Não foi possível carregar o carrinho.</h1>
+        <p role="alert" className="mt-2 text-sm text-[var(--danger)]">
+          {getApiError(session.error ?? remoteCart.error ?? nftQueries.find((query) => query.error)?.error).message}
+        </p>
+        <Button className="mt-5" onClick={() => {
+          void session.refetch();
+          void remoteCart.refetch();
+          nftQueries.forEach((query) => { void query.refetch(); });
+        }}>Tentar novamente</Button>
+      </main>
+    );
+  const rows = items.flatMap((item, index) => {
+    const nft = nftQueries[index]?.data;
     const edition = nft?.editions.find(({ id }) => id === item.editionId);
     return nft && edition ? [{ item, nft, edition }] : [];
   });
@@ -150,6 +183,7 @@ export function CartPage() {
             {getApiError(cartItemMutation.error).message}
           </p>
         )}
+        {marketChanged && <p role="status" className="mt-3 text-xs text-[var(--accent)]">Preço ou disponibilidade de um NFT no carrinho mudaram. Confira os valores atualizados antes de pagar.</p>}
         {rows.length === 0 ? (
           <EmptyCart />
         ) : (
@@ -271,6 +305,7 @@ export function CartPage() {
             {getApiError(cartItemMutation.error).message}
           </p>
         )}
+        {marketChanged && <p role="status" className="mt-3 text-sm text-[var(--accent)]">Preço ou disponibilidade de um NFT no carrinho mudaram. Confira os valores atualizados antes de pagar.</p>}
         {rows.length === 0 ? (
           <EmptyCart />
         ) : (

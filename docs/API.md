@@ -37,7 +37,7 @@ O MSW atende `/api` no navegador. Os tipos estão em `src/api/contracts.ts`, os 
 | `POST /api/orders` | `{ walletId, provider?, quote, idempotencyKey }` | Pedido (`201`); repetição da mesma chave e corpo devolve o pedido (`200`). |
 | `GET /api/orders/:orderId` | — | Pedido da conta; `403` para pedido de outra conta. |
 
-O pedido só confirma com itens, carteira da conta, estoque e cotação atuais. Chave de idempotência reutilizada com outro corpo retorna `409 IDEMPOTENCY_CONFLICT`. Confirmação limpa o carrinho; recusa o preserva. O recibo usa um snapshot dos itens e da cotação.
+O pedido só confirma com itens, carteira da conta, estoque e cotação atuais. Chave de idempotência reutilizada com outro corpo retorna `409 IDEMPOTENCY_CONFLICT`. Confirmação retira do carrinho apenas as quantidades compradas; pedido pendente ou recusado preserva os itens. `lines` contém nome, imagem, edição, preço unitário e subtotal capturados na compra, além do snapshot da cotação.
 
 ## Cenários determinísticos
 
@@ -49,6 +49,9 @@ A rota `/mock` permite escolher um cenário e reiniciar o estado. A troca de cen
 | `PUT /api/mock/scenario` | `{ "scenario": "id" }` seleciona o cenário e reinicia os dados. |
 | `POST /api/mock/reset` | Reinicia os dados mantendo o cenário selecionado. |
 | `POST /api/mock/nfts/:id` | `{ "editionId": "...", "price"?: "1.49", "availableQuantity"?: 0 }` altera a edição, incrementa `version` e persiste até o próximo reset. |
+| `POST /api/mock/orders/:id/status` | `{ "status": "confirmed" }` ou `{ "status": "declined" }` conclui um pedido pendente, incrementa `version` e persiste. |
+| `PUT /api/mock/realtime` | `{ "connected": false }` derruba as conexões Socket.IO; `true` permite reconexão. |
+| `POST /api/mock/events` | `{ "event": "nft.updated" ou "order.updated", "payload": ... }` injeta um evento com ID e versão para testar repetição e ordem. |
 
 Os controles permanecem acessíveis mesmo nos cenários de desconexão e 503.
 
@@ -65,10 +68,15 @@ Os controles permanecem acessíveis mesmo nos cenários de desconexão e 503.
 | `request-timeout` | Resposta ultrapassa os 10 segundos de timeout do Axios. |
 | `expired-session` | Login cria sessão que expira em cinco segundos. |
 | `registration-conflict` | Cadastro responde `409 EMAIL_CONFLICT`. |
+| `favorite-error` | Adicionar ou remover favorito responde 503 após 400 ms, permitindo verificar a reversão da atualização otimista. |
 | `expired-coupon` | `JUNGLE10` responde `409 COUPON_EXPIRED`. |
 | `price-changed` | Edição `ed-aurora` passa a 1.49 ETH. |
 | `edition-sold-out` | Edição `ed-aurora` fica sem estoque. |
 | `order-timeout` | Primeiro envio cria o pedido, mas perde a resposta; reenvio com a mesma chave o recupera. |
+| `order-pending` | Pedido fica pendente até ser concluído pelo endpoint de controle. |
 | `payment-declined` | Pedido recebe status `declined` e preserva o carrinho. |
+| `wallet-disconnected` | Envio responde `409 WALLET_DISCONNECTED` antes de criar pedido; o carrinho permanece. |
 
-A ligação completa dessas respostas a todas as telas e os eventos Socket.IO ficam para as próximas etapas.
+## Tempo real
+
+O cliente Socket.IO usa `/socket.io/`, com `@mswjs/socket.io-binding` no navegador. `nft.updated` contém `{ id, version, nft }`; `order.updated` contém `{ id, userId, version, order }`. Eventos de pedido são enviados apenas à conexão inscrita no mesmo usuário autenticado. O cliente ignora versões repetidas ou anteriores e, ao conectar ou reconectar, invalida as consultas REST relevantes para recuperar eventos perdidos. Mudanças de NFT atualizam catálogo e detalhe, alertam no carrinho e exigem revisão da cotação no checkout antes da compra.

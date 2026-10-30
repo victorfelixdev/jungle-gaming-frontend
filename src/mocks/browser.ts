@@ -1,8 +1,9 @@
 import { setupWorker } from 'msw/browser'
 import { handlers } from './handlers'
 import { mockState } from './state'
+import { realtimeHandler } from './realtime'
 
-export const worker = setupWorker(...handlers)
+export const worker = setupWorker(...handlers, realtimeHandler)
 
 export async function enableMocking() {
   if (import.meta.env.VITE_ENABLE_MSW === 'false') return

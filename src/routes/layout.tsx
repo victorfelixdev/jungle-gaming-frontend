@@ -8,6 +8,7 @@ import { cartQueryKey, clearPrivateCache, sessionQueryKey, signOut, useSession }
 import { useGuestCart } from "@/features/cart/local-cart";
 import { useEffect, useState } from "react";
 import { AuthForm } from "@/features/auth/auth-form";
+import { RealtimeSync } from "@/features/realtime/realtime-sync";
 
 export function RootLayout() {
   const queryClient = useQueryClient();
@@ -59,6 +60,7 @@ export function RootLayout() {
   const itemCount = guestItemCount + serverItemCount;
   return (
     <div className={`min-h-screen bg-[var(--background)] text-[var(--foreground)] md:pb-0 ${isAuthPage ? "pb-0" : "pb-24"}`}>
+      <RealtimeSync userId={session.data?.user.id} />
       <header className="hidden bg-[var(--background)] px-6 md:block lg:px-[120px]">
         <nav
           aria-label="Principal"
@@ -94,6 +96,13 @@ export function RootLayout() {
               type="button"
               className="grid size-8 place-items-center text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
               aria-label="Buscar"
+              onClick={() => {
+                void navigate({ to: "/", search: { page: 1, pageSize: 9, sort: "featured" } }).then(() => {
+                  const input = document.querySelector<HTMLInputElement>('#catalog input[name="query"]');
+                  input?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  input?.focus();
+                });
+              }}
             >
               <Search size={20} strokeWidth={1.75} />
             </button>

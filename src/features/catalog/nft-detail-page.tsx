@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { Heart, Mail, Minus, Plus, Star, ZoomIn } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { apiClient } from "@/api/client";
 import type { Cart, Favorite, NftEdition } from "@/api/contracts";
 import { getApiError } from "@/api/error";
@@ -13,6 +13,7 @@ import { useGuestCart } from "@/features/cart/local-cart";
 import { cartQueryKey, useSession } from "@/features/auth/session";
 import { HomeFooter } from "./home-footer";
 import { RelatedNfts } from "./related-nfts";
+import { useDialogFocus } from "@/lib/use-dialog-focus";
 
 export function NftDetailPage() {
   const { nftId } = useParams({ from: "/nft/$nftId" });
@@ -42,14 +43,22 @@ export function NftDetailPage() {
       if (active) await apiClient.delete(`/favorites/${id}`);
       else await apiClient.post(`/favorites/${id}`);
     },
-    onSuccess: (_, { id, active }) => {
+    onMutate: async ({ id, active }) => {
+      const key = ["favorites", session.data?.user.id];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<Favorite[]>(key);
       queryClient.setQueryData<Favorite[]>(
-        ["favorites", session.data?.user.id],
+        key,
         (current = []) => active
           ? current.filter(({ nftId }) => nftId !== id)
           : [...current, { nftId: id, createdAt: new Date().toISOString() }],
       );
+      return { previous };
     },
+    onError: (_error, _variables, context) => {
+      queryClient.setQueryData(["favorites", session.data?.user.id], context?.previous);
+    },
+    onSettled: () => void queryClient.invalidateQueries({ queryKey: ["favorites", session.data?.user.id] }),
   });
   const cart = useMutation({
     mutationFn: async ({
@@ -127,6 +136,7 @@ export function NftDetailPage() {
 
   return (
     <main className="min-h-dvh bg-[var(--surface-card)] md:mx-auto md:max-w-[1200px] md:bg-[var(--background)] md:pb-0 md:pt-3">
+      {selectedEdition && <p role="status" className="sr-only">Edição {selectedEdition.name}: {selectedEdition.price} ETH, {selectedEdition.availableQuantity} disponíveis.</p>}
       <section className="flex min-h-dvh w-full flex-col md:hidden">
         <div className="relative bg-[var(--surface-raised)] px-5 pt-12">
           <button
@@ -416,14 +426,20 @@ export function NftDetailPage() {
             })
           }
         />
-        {imageOpen && (
-          <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-8" onClick={() => setImageOpen(false)}>
-            <button type="button" onClick={() => setImageOpen(false)} className="absolute right-6 top-5 text-2xl" aria-label="Fechar imagem ampliada">×</button>
-            <img src={nft.data.imageUrl} alt={`NFT ${nft.data.name} ampliado`} className="max-h-full max-w-full rounded-2xl object-contain" onClick={(event) => event.stopPropagation()} />
-          </div>
-        )}
+        {imageOpen && <ImageDialog name={nft.data.name} imageUrl={nft.data.imageUrl} onClose={() => setImageOpen(false)} />}
       </div>
     </main>
+  );
+}
+
+function ImageDialog({ name, imageUrl, onClose }: { name: string; imageUrl: string; onClose: () => void }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialogRef, true, onClose);
+  return (
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={`Imagem ampliada de ${name}`} tabIndex={-1} className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-8" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <button type="button" onClick={onClose} className="absolute right-6 top-5 text-2xl" aria-label="Fechar imagem ampliada">×</button>
+      <img src={imageUrl} alt={`NFT ${name} ampliado`} className="max-h-full max-w-full rounded-2xl object-contain" />
+    </div>
   );
 }
 
