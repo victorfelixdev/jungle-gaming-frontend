@@ -30,6 +30,7 @@ import {
   WalletsRoute,
 } from "./routes/placeholders";
 import "./styles/globals.css";
+import { enableMocking } from "./mocks/browser";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
@@ -183,7 +184,6 @@ declare module "@tanstack/react-router" {
 
 async function bootstrap() {
   if (import.meta.env.VITE_ENABLE_MSW !== "false") {
-    const { enableMocking } = await import("./mocks/browser");
     await enableMocking();
   }
   createRoot(document.getElementById("root")!).render(

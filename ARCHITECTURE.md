@@ -64,3 +64,5 @@ src/
 ```
 
 Os contratos REST, eventos Socket.IO e cenários de falha estão em `docs/API.md`.
+
+A auditoria Lighthouse de início e detalhe em desktop e mobile, incluindo metodologia, medianas, relatórios HTML/JSON e análise dos custos do MSW no carregamento, está em `docs/PERFORMANCE.md` e `reports/lighthouse/`.

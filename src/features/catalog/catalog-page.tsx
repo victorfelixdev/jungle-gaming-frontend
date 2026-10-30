@@ -608,6 +608,7 @@ function Hero() {
         <img
           src="/assets/figma/hero-mobile-mask.svg"
           alt=""
+          fetchPriority="high"
           className="absolute inset-0 size-full"
         />
         <div className="relative h-full w-full">
