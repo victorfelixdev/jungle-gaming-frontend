@@ -111,9 +111,9 @@ export function RootLayout() {
               className="relative grid size-8 place-items-center text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
               aria-label="Abrir carrinho"
             >
-              <ShoppingCart size={20} strokeWidth={1.75} />
+              <img src="/assets/figma/cart.svg" alt="" aria-hidden="true" width="20" height="20" />
               {itemCount > 0 && (
-                <span className="absolute -right-0.5 top-0 grid size-4 place-items-center rounded-full bg-[var(--primary)] text-[10px] font-bold text-[var(--background)]">
+                <span className="absolute -right-0.5 top-1 grid size-4 place-items-center rounded-full bg-[var(--primary)] text-[10px] font-bold text-[var(--background)]">
                   {itemCount > 99 ? "99+" : itemCount}
                 </span>
               )}
