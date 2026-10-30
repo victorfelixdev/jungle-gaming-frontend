@@ -44,7 +44,7 @@ export function ProfileSidebar({ active }: { active: "profile" | "wallets" }) {
         <button
           type="button"
           onClick={() => void signOut(queryClient).then(() => navigate({ to: "/", search: { page: 1, pageSize: 9, sort: "featured" } }))}
-          className="mt-1 flex min-h-10 items-center gap-3 border-t border-[var(--border)] px-4 text-left hover:bg-[var(--surface-hover)]"
+          className="cursor-pointer mt-1 flex min-h-10 items-center gap-3 border-t border-[var(--border)] px-4 text-left hover:bg-[var(--surface-hover)]"
         >
           <LogOut size={16} /> Sair
         </button>
