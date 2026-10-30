@@ -178,7 +178,7 @@ export function CatalogPage() {
                   aria-pressed={Boolean(
                     search.categories?.includes(category.value),
                   )}
-                  className={`flex h-[37px] items-center justify-between px-3 text-left text-sm ${search.categories?.includes(category.value) || (!search.categories?.length && index === 0) ? "text-[var(--accent)]" : "text-[var(--muted-foreground)]"}`}
+                  className={`cursor-pointer flex h-[37px] items-center justify-between px-3 text-left text-sm ${search.categories?.includes(category.value) || (!search.categories?.length && index === 0) ? "text-[var(--accent)]" : "text-[var(--muted-foreground)]"}`}
                 >
                   <span>{category.label}</span>
                   <span>

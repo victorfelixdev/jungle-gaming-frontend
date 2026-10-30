@@ -139,9 +139,9 @@ export function HomeFooter({
           <h2 className="text-sm font-bold">Meu perfil</h2>
           <ul className="mt-3 grid gap-3">
             {profileItems.map((item) => (
-              <li key={item}>
+              <li key={item} className="cursor-not-allowed">
                 {item === "Meu perfil" ? (
-                  <Link to="/profile" className="hover:text-[var(--accent)]">
+                  <Link to="/profile" className="cursor-pointerhover:text-[var(--accent)]">
                     {item}
                   </Link>
                 ) : (
@@ -155,7 +155,7 @@ export function HomeFooter({
           <h2 className="text-sm font-bold">Central de ajuda</h2>
           <ul className="mt-3 grid gap-3">
             {helpItems.map((item) => (
-              <li key={item}>{item}</li>
+              <li key={item} className="cursor-not-allowed">{item}</li>
             ))}
           </ul>
         </div>
@@ -167,7 +167,7 @@ export function HomeFooter({
                 <button
                   type="button"
                   onClick={() => onSelectCategory(item.category)}
-                  className="text-left hover:text-[var(--accent)]"
+                  className="cursor-pointer text-left hover:text-[var(--accent)]"
                 >
                   {item.label}
                 </button>
@@ -185,7 +185,7 @@ export function HomeFooter({
               <span
                 key={label}
                 title={label}
-                className="grid size-7 place-items-center rounded border border-[var(--primary)] text-[var(--primary)]"
+                className="grid size-7 place-items-center rounded border border-[var(--primary)] text-[var(--primary)] cursor-not-allowed"
               >
                 {image ? (
                   <img src={image} alt="" aria-hidden="true" />

@@ -105,8 +105,8 @@ export function RootLayout() {
             >
               Mercado
             </Link>
-            <span>Criadores</span>
-            <span>Aprenda</span>
+            <span className="cursor-not-allowed">Criadores</span>
+            <span className="cursor-not-allowed">Aprenda</span>
           </div>
           <div className="flex items-center justify-self-end gap-6">
             <form
