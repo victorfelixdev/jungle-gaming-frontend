@@ -6,6 +6,7 @@ import type { Cart, CreateOrderInput, Order, Quote, Wallet } from "@/api/contrac
 import { apiClient } from "@/api/client";
 import { getApiError } from "@/api/error";
 import { Button } from "@/components/ui/button";
+import { CouponPill } from "@/components/ui/coupon-pill";
 import { DropdownSelect } from "@/components/ui/dropdown-select";
 import { Input } from "@/components/ui/input";
 import { nftQueryOptions } from "@/api/nfts";
@@ -24,6 +25,7 @@ export function CheckoutPage() {
   const [provider, setProvider] = useState("Coinbase Wallet");
   const [ensSuffix, setEnsSuffix] = useState(".eth");
   const [promoOpen, setPromoOpen] = useState(false);
+  const [promoError, setPromoError] = useState("");
   const [orderFeedback, setOrderFeedback] = useState("");
   const [marketChanged, setMarketChanged] = useState(false);
   const recoveryStarted = useRef<string | null>(null);
@@ -65,6 +67,25 @@ export function CheckoutPage() {
   const reviewMarketChange = async () => {
     await Promise.all([cart.refetch(), quote.refetch()]);
     setMarketChanged(false);
+  };
+  const applyCoupon = async (code: string) => {
+    const next = code.trim().toUpperCase();
+    if (!next || !session.data) return;
+    try {
+      const validated = (await apiClient.post<Quote>("/quotes", { coupon: next })).data;
+      queryClient.setQueryData(quoteQueryKey(session.data.user.id, next, cart.data?.version), validated);
+      setCoupon(next);
+      sessionStorage.setItem("kurio:checkout-coupon", next);
+      setPromoError("");
+      setPromoOpen(false);
+    } catch (reason) {
+      setPromoError(getApiError(reason).message);
+    }
+  };
+  const removeCoupon = () => {
+    setCoupon("");
+    setPromoError("");
+    sessionStorage.removeItem("kurio:checkout-coupon");
   };
   const createWallet = useMutation({
     mutationFn: async (details?: { address: string; network: "ethereum" | "polygon" }) =>
@@ -319,6 +340,7 @@ export function CheckoutPage() {
                 </button>
               ))}
             </div>
+            {coupon && <div className="mt-5"><CouponPill code={coupon} onRemove={removeCoupon} /></div>}
             <p className="mt-5 flex justify-end gap-5 text-sm font-bold">
               Total:{" "}
               <span className="text-[var(--accent)]">
@@ -451,15 +473,22 @@ export function CheckoutPage() {
                   </div>
                 ))}
               </div>
-              <button type="button" onClick={() => setPromoOpen((open) => !open)} className="cursor-pointer mt-3 text-xs hover:text-[var(--accent)]">Tem um código promocional? Aplique aqui</button>
-              {promoOpen && (
-                <form className="mt-2 flex gap-2" onSubmit={(event) => {
-                  event.preventDefault();
-                  setCoupon(new FormData(event.currentTarget).get("coupon")?.toString().trim().toUpperCase() ?? "");
-                }}>
-                  <Input name="coupon" placeholder="Código promocional" defaultValue={coupon} className="min-h-9 bg-transparent text-xs" />
-                  <Button type="submit" className="min-h-9 text-xs">Aplicar</Button>
-                </form>
+              {coupon ? (
+                <div className="mt-3"><CouponPill code={coupon} onRemove={removeCoupon} /></div>
+              ) : (
+                <>
+                  <button type="button" onClick={() => setPromoOpen((open) => !open)} className="cursor-pointer mt-3 text-xs hover:text-[var(--accent)]">Tem um código promocional? Aplique aqui</button>
+                  {promoOpen && (
+                    <form className="mt-2 flex gap-2" onSubmit={(event) => {
+                      event.preventDefault();
+                      void applyCoupon(new FormData(event.currentTarget).get("coupon")?.toString() ?? "");
+                    }}>
+                      <Input name="coupon" placeholder="Código promocional" className="min-h-9 bg-transparent text-xs" />
+                      <Button type="submit" className="min-h-9 text-xs">Aplicar</Button>
+                    </form>
+                  )}
+                  {promoError && <p role="alert" className="mt-2 text-xs text-[var(--danger)]">{promoError}</p>}
+                </>
               )}
               {quote.data ? (
                 <div className="mt-3 grid gap-2 text-xs">

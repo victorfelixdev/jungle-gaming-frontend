@@ -1,5 +1,35 @@
 import { expect, test } from '@playwright/test'
 
+test('shows an applied coupon as a removable pill in cart and checkout', async ({ page }) => {
+  await page.goto('/nft/nft-aurora')
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
+  await page.getByRole('button', { name: mobile ? 'Comprar NFT' : 'COMPRAR', exact: true }).click()
+  await expect(page).toHaveURL(/\/cart$/)
+
+  const couponInput = page.locator('input[placeholder="Digite o código promocional..."]:visible')
+  await couponInput.fill('jungle10')
+  await page.getByRole('button', { name: 'Aplicar' }).filter({ visible: true }).click()
+  const remove = page.getByRole('button', { name: 'Remover cupom JUNGLE10' }).filter({ visible: true })
+  await expect(remove).toBeVisible()
+  await expect(couponInput).toBeHidden()
+  await remove.click()
+  await expect(couponInput).toBeVisible()
+  expect(await page.evaluate(() => sessionStorage.getItem('kurio:checkout-coupon'))).toBeNull()
+
+  await couponInput.fill('JUNGLE10')
+  await page.getByRole('button', { name: 'Aplicar' }).filter({ visible: true }).click()
+  await expect(remove).toBeVisible()
+  await page.goto('/login?redirect=%2Fcheckout')
+  await page.locator('input[name=email]:visible').fill('ana@junglegaming.test')
+  await page.locator('input[name=password]:visible').fill('jungle123')
+  await page.locator('button[type=submit]:visible').click()
+  await expect(page).toHaveURL(/\/checkout$/)
+  await expect(remove).toBeVisible()
+  await remove.click()
+  await expect(remove).toBeHidden()
+  expect(await page.evaluate(() => sessionStorage.getItem('kurio:checkout-coupon'))).toBeNull()
+})
+
 test('renders the catalog and opens an NFT detail', async ({ page }) => {
   await page.goto('/')
   const heroTitle = page.viewportSize()?.width && page.viewportSize()!.width < 600 ? /cultura digital/i : /seja dono do futuro/i

@@ -7,6 +7,7 @@ import { apiClient } from "@/api/client";
 import { getApiError } from "@/api/error";
 import { nftQueryOptions } from "@/api/nfts";
 import { Button } from "@/components/ui/button";
+import { CouponPill } from "@/components/ui/coupon-pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeFooter } from "@/features/catalog/home-footer";
 import { RelatedNfts } from "@/features/catalog/related-nfts";
@@ -152,6 +153,12 @@ export function CartPage() {
     setCoupon(next);
     sessionStorage.setItem("kurio:checkout-coupon", next);
   };
+  const removeCoupon = () => {
+    setCoupon("");
+    setCouponInput("");
+    setCouponError("");
+    sessionStorage.removeItem("kurio:checkout-coupon");
+  };
   return (
     <main className="min-h-dvh bg-[var(--background)] md:mx-auto md:max-w-[1236px] md:px-0 md:pb-0 md:pt-8">
       <div className="px-6 pb-[310px] pt-6 md:hidden">
@@ -244,27 +251,31 @@ export function CartPage() {
       </div>
       {rows.length > 0 && (
         <aside className="fixed inset-x-0 bottom-0 z-30 rounded-t-[30px] bg-[var(--surface-card)] px-5 pb-7 pt-5 shadow-[0_0_20px_0_rgb(10_6_4_/_45%)] md:hidden">
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              void applyCoupon();
-            }}
-            className="flex h-11 items-center rounded-full border border-[var(--border)] shadow-[0_6px_20px_0_rgb(10_6_4_/_45%)]"
-          >
-            <input
-              value={couponInput}
-              onChange={(event) => setCouponInput(event.target.value)}
-              aria-label="Código promocional"
-              placeholder="Digite o código promocional..."
-              className="min-w-0 flex-1 bg-transparent px-3 text-[10px] text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
-            />
-            <button
-              type="submit"
-              className="cursor-pointer h-11 rounded-full bg-[var(--primary)] px-4 text-xs font-bold text-[var(--foreground)]"
+          {coupon ? (
+            <CouponPill code={coupon} onRemove={removeCoupon} />
+          ) : (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void applyCoupon();
+              }}
+              className="flex h-11 items-center rounded-full border border-[var(--border)] shadow-[0_6px_20px_0_rgb(10_6_4_/_45%)]"
             >
-              Aplicar
-            </button>
-          </form>
+              <input
+                value={couponInput}
+                onChange={(event) => setCouponInput(event.target.value)}
+                aria-label="Código promocional"
+                placeholder="Digite o código promocional..."
+                className="min-w-0 flex-1 bg-transparent px-3 text-[10px] text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
+              />
+              <button
+                type="submit"
+                className="cursor-pointer h-11 rounded-full bg-[var(--primary)] px-4 text-xs font-bold text-[var(--foreground)]"
+              >
+                Aplicar
+              </button>
+            </form>
+          )}
           {(couponError || quote.error) && (
             <p role="alert" className="mt-1 text-xs text-[var(--danger)]">
               {couponError || getApiError(quote.error).message}
@@ -367,23 +378,30 @@ export function CartPage() {
             </div>
             <aside className="h-fit min-w-0">
               <h2 className="border-b border-[var(--border)] pb-2 text-lg font-bold">Resumo da carteira</h2>
-              <form
-                onSubmit={(event) => { event.preventDefault(); void applyCoupon(); }}
-                className="cart-desktop-coupon mt-5"
-              >
-                <label htmlFor="desktop-coupon" className="text-sm font-bold">Código promocional</label>
-                <div className="mt-2 flex h-[42px] overflow-hidden rounded-sm border border-[var(--primary)]">
-                  <input
-                    id="desktop-coupon"
-                    value={couponInput}
-                    onChange={(event) => setCouponInput(event.target.value)}
-                    placeholder="Digite o código promocional..."
-                    className="min-w-0 flex-1 bg-transparent px-2 text-xs text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
-                  />
-                  <button type="submit" className="bg-[var(--primary)] px-5 text-sm font-bold text-[var(--background)]">Aplicar</button>
+              {coupon ? (
+                <div className="mt-5">
+                  <p className="mb-2 text-sm font-bold">Código promocional</p>
+                  <CouponPill code={coupon} onRemove={removeCoupon} />
                 </div>
-                {(couponError || quote.error) && <p role="alert" className="mt-2 text-xs text-[var(--danger)]">{couponError || getApiError(quote.error).message}</p>}
-              </form>
+              ) : (
+                <form
+                  onSubmit={(event) => { event.preventDefault(); void applyCoupon(); }}
+                  className="cart-desktop-coupon mt-5"
+                >
+                  <label htmlFor="desktop-coupon" className="text-sm font-bold">Código promocional</label>
+                  <div className="mt-2 flex h-[42px] overflow-hidden rounded-sm border border-[var(--primary)]">
+                    <input
+                      id="desktop-coupon"
+                      value={couponInput}
+                      onChange={(event) => setCouponInput(event.target.value)}
+                      placeholder="Digite o código promocional..."
+                      className="min-w-0 flex-1 bg-transparent px-2 text-xs text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
+                    />
+                    <button type="submit" className="bg-[var(--primary)] px-5 text-sm font-bold text-[var(--background)]">Aplicar</button>
+                  </div>
+                  {(couponError || quote.error) && <p role="alert" className="mt-2 text-xs text-[var(--danger)]">{couponError || getApiError(quote.error).message}</p>}
+                </form>
+              )}
               <div className="mt-6 grid gap-3 text-base">
                 <div className="flex justify-between gap-3"><span>Subtotal</span><span>{displaySubtotal} ETH</span></div>
                 <div className="flex justify-between gap-3"><span>Desconto do lançamento</span><span>(-) {session.data ? `${displayDiscount} ETH` : discountLabel}</span></div>
