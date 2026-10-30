@@ -1,5 +1,36 @@
 import { expect, test } from '@playwright/test'
 
+test('searches from the desktop header without losing catalog filters', async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 0) < 768, 'O header de busca é exibido apenas no desktop.')
+  await page.goto('/?categories=%5B%22Arte%22%5D&page=2&pageSize=9&sort=price-asc')
+  await expect(page.locator('#catalog').getByRole('button', { name: /Arte digital/ })).toBeVisible()
+  const header = page.getByRole('navigation', { name: 'Principal' })
+  const toggle = header.getByRole('button', { name: 'Abrir busca' })
+  await toggle.click()
+  const input = header.getByRole('searchbox', { name: 'Buscar NFTs' })
+  await expect(input).toBeFocused()
+  await input.fill('Emerald')
+  await input.press('Enter')
+  await expect(page).toHaveURL(/query=Emerald/)
+  await expect(page).toHaveURL(/categories/)
+  await expect(page).toHaveURL(/sort=price-asc/)
+  await expect(page).toHaveURL(/page=1/)
+  await expect(page.locator('#catalog').getByRole('link', { name: /Emerald Ape #042/ }).first()).toBeVisible()
+
+  await header.getByRole('button', { name: 'Abrir busca' }).click()
+  await expect(input).toHaveValue('Emerald')
+  await input.press('Escape')
+  await expect(input).toBeDisabled()
+  await expect(header.getByRole('button', { name: 'Abrir busca' })).toBeFocused()
+
+  await header.getByRole('link', { name: 'Abrir carrinho' }).click()
+  await header.getByRole('button', { name: 'Abrir busca' }).click()
+  await input.fill('Violet')
+  await header.getByRole('button', { name: 'Buscar', exact: true }).click()
+  await expect(page).toHaveURL(/query=Violet/)
+  await expect(page.locator('#catalog').getByRole('link', { name: /Violet Nomad #314/ }).first()).toBeVisible()
+})
+
 test('combines catalog search and filters in the URL across reload', async ({ page }) => {
   test.skip((page.viewportSize()?.width ?? 0) < 768, 'Os filtros mobile são cobertos em accessibility.spec.ts.')
   await page.goto('/')

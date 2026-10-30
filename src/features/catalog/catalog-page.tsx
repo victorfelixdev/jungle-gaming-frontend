@@ -167,6 +167,7 @@ export function CatalogPage() {
       >
         <aside className="hidden self-start md:block">
           <div className="bg-[var(--surface-card)] px-[18px] pb-5 pt-4">
+            
             <h2 className="text-base font-bold">Coleções</h2>
             <div className="mt-2 grid">
               {categories.map((category, index) => (
@@ -265,11 +266,6 @@ export function CatalogPage() {
               ))}
             </div>
             <div className="flex items-center gap-4">
-              <SearchForm
-                search={search.query}
-                onSearch={(query) => setSearch({ query })}
-                className="hidden gap-2 md:flex"
-              />
               <SortDropdown value={search.sort} onChange={(sort) => setSearch({ sort })} />
             </div>
           </div>
@@ -447,7 +443,7 @@ export function CatalogPage() {
 
 function SortDropdown({ value, onChange, mobile = false }: { value: NftSort; onChange: (value: NftSort) => void; mobile?: boolean }) {
   return (
-    <div className={`${mobile ? "flex" : "hidden md:flex"} items-center gap-2 text-xs text-[var(--muted-foreground)]`}>
+    <div className={`${mobile ? "flex" : "hidden md:flex"} cursor-pointer items-center gap-2 text-xs text-[var(--muted-foreground)]`}>
       <span>Ordenar</span>
       <DropdownSelect
         value={value}

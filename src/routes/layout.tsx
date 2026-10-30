@@ -1,12 +1,12 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Home, Heart, Search, ShoppingCart } from "lucide-react";
+import { Home, Heart, Search } from "lucide-react";
 import type { Cart } from "@/api/contracts";
 import { apiClient } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { cartQueryKey, clearPrivateCache, sessionQueryKey, signOut, useSession } from "@/features/auth/session";
 import { useGuestCart } from "@/features/cart/local-cart";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AuthForm } from "@/features/auth/auth-form";
 import { RealtimeSync } from "@/features/realtime/realtime-sync";
 
@@ -15,7 +15,24 @@ export function RootLayout() {
   const navigate = useNavigate();
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [authOpen, setAuthOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchRef = useRef<HTMLFormElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchButtonRef = useRef<HTMLButtonElement>(null);
   const pathname = useLocation({ select: (location) => location.pathname });
+  const catalogSearch = useLocation({
+    select: (location) => location.pathname === "/" ? location.search : null,
+  });
+  useEffect(() => {
+    if (!searchOpen) return;
+    searchInputRef.current?.focus();
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!searchRef.current?.contains(event.target as Node)) setSearchOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
+  }, [searchOpen]);
   const isAuthPage = pathname === "/login" || pathname === "/register";
   const isMarketPage = pathname.startsWith("/nft/") || pathname === "/cart" || pathname === "/checkout";
   const hasMobileCheckoutBar = useLocation({
@@ -92,20 +109,64 @@ export function RootLayout() {
             <span>Aprenda</span>
           </div>
           <div className="flex items-center justify-self-end gap-6">
-            <button
-              type="button"
-              className="grid size-8 place-items-center text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
-              aria-label="Buscar"
-              onClick={() => {
-                void navigate({ to: "/", search: { page: 1, pageSize: 9, sort: "featured" } }).then(() => {
-                  const input = document.querySelector<HTMLInputElement>('#catalog input[name="query"]');
-                  input?.scrollIntoView({ behavior: "smooth", block: "center" });
-                  input?.focus();
+            <form
+              ref={searchRef}
+              role="search"
+              className="relative size-8"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const query = searchQuery.trim() || undefined;
+                setSearchOpen(false);
+                void navigate({
+                  to: "/",
+                  search: {
+                    ...(catalogSearch ?? {}),
+                    page: 1,
+                    pageSize: 9,
+                    sort: catalogSearch?.sort ?? "featured",
+                    query,
+                  },
+                }).then(() => {
+                  document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
                 });
               }}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  setSearchOpen(false);
+                  searchButtonRef.current?.focus();
+                }
+              }}
             >
-              <Search size={20} strokeWidth={1.75} />
-            </button>
+              <input
+                ref={searchInputRef}
+                id="header-search-input"
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Buscar NFTs"
+                aria-label="Buscar NFTs"
+                disabled={!searchOpen}
+                className={`absolute right-10 top-1/2 h-9 -translate-y-1/2 rounded-md bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)] outline-none transition-[width,opacity] duration-200 placeholder:text-[var(--muted-foreground)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] ${searchOpen ? "w-40 border border-[var(--border)] opacity-100 lg:w-52" : "pointer-events-none w-0 border-0 opacity-0"}`}
+              />
+              <button
+                ref={searchButtonRef}
+                type="button"
+                className="cursor-pointer grid size-8 place-items-center text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+                aria-label={searchOpen ? "Buscar" : "Abrir busca"}
+                aria-expanded={searchOpen}
+                aria-controls="header-search-input"
+                onClick={() => {
+                  if (searchOpen) {
+                    searchRef.current?.requestSubmit();
+                  } else {
+                    setSearchQuery(typeof catalogSearch?.query === "string" ? catalogSearch.query : "");
+                    setSearchOpen(true);
+                  }
+                }}
+              >
+                <Search size={20} strokeWidth={1.75} />
+              </button>
+            </form>
             <Link
               to="/cart"
               className="relative grid size-8 place-items-center text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
