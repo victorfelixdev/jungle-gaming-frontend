@@ -24,6 +24,8 @@ npm run preview
 
 O preview usa normalmente `http://localhost:4173`. Navegação direta e refresh das rotas funcionam no Vite preview. O arquivo `public/mockServiceWorker.js` precisa ser servido na raiz também quando a aplicação for publicada.
 
+Na Vercel, `vercel.json` reescreve as URLs da aplicação para `index.html`, permitindo acesso direto e refresh em `/mock`, `/nft/:id`, `/cart` e demais rotas do TanStack Router. Configure o projeto como Vite com saída em `dist`; após publicar uma mudança de rota, faça um novo deploy e confira também `/mockServiceWorker.js` na raiz do domínio.
+
 ### Variáveis de ambiente
 
 O arquivo `.env.example` mostra as opções. Copiar para `.env` é opcional: os valores padrão já habilitam o mock e escolhem o cenário normal.
