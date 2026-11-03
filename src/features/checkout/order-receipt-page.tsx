@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { X } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import type { Order, Wallet } from "@/api/contracts";
 import { apiClient } from "@/api/client";
 import { getApiError } from "@/api/error";
 import { orderQueryKey, useSession, walletsQueryKey } from "@/features/auth/session";
 import { useDialogFocus } from "@/lib/use-dialog-focus";
+import { clearCouponAfterConfirmedOrder } from "./pending-order";
 
 export function OrderReceiptPage() {
   const { orderId } = useParams({ from: "/order/$orderId" });
@@ -26,6 +27,9 @@ export function OrderReceiptPage() {
     enabled: Boolean(order.data),
     queryFn: async () => (await apiClient.get<Wallet[]>("/wallets")).data,
   });
+  useEffect(() => {
+    if (order.data?.status === "confirmed") clearCouponAfterConfirmedOrder(orderId);
+  }, [order.data?.status, orderId]);
   useDialogFocus(dialogRef, Boolean(order.data), () => void navigate({ to: "/", search: { page: 1, pageSize: 9, sort: "featured" } }));
   if (order.isPending)
     return (

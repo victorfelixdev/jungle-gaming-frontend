@@ -1,6 +1,7 @@
 import type { CreateOrderInput } from "@/api/contracts";
 
 const keyFor = (userId: string) => `kurio:pending-order:${userId}`;
+const pendingCouponOrderKey = "kurio:pending-coupon-order";
 
 export function readPendingOrder(userId: string): CreateOrderInput | null {
   try {
@@ -17,4 +18,14 @@ export function savePendingOrder(userId: string, input: CreateOrderInput) {
 
 export function clearPendingOrder(userId: string) {
   sessionStorage.removeItem(keyFor(userId));
+}
+
+export function rememberPendingCouponOrder(orderId: string) {
+  sessionStorage.setItem(pendingCouponOrderKey, orderId);
+}
+
+export function clearCouponAfterConfirmedOrder(orderId?: string) {
+  if (orderId && sessionStorage.getItem(pendingCouponOrderKey) !== orderId) return;
+  sessionStorage.removeItem("kurio:checkout-coupon");
+  sessionStorage.removeItem(pendingCouponOrderKey);
 }

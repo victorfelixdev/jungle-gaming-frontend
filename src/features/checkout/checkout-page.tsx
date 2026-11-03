@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { nftQueryOptions } from "@/api/nfts";
 import { HomeFooter } from "@/features/catalog/home-footer";
 import { cartQueryKey, quoteQueryKey, useSession, walletsQueryKey } from "@/features/auth/session";
-import { clearPendingOrder, readPendingOrder, savePendingOrder } from "./pending-order";
+import { clearCouponAfterConfirmedOrder, clearPendingOrder, readPendingOrder, rememberPendingCouponOrder, savePendingOrder } from "./pending-order";
 
 export function CheckoutPage() {
   const navigate = useNavigate();
@@ -137,6 +137,8 @@ export function CheckoutPage() {
         setOrderFeedback("Pagamento recusado. Seu carrinho foi preservado; escolha outra carteira ou tente novamente.");
         return;
       }
+      if (created.status === "confirmed") clearCouponAfterConfirmedOrder();
+      else if (coupon) rememberPendingCouponOrder(created.id);
       setOrderFeedback("");
       void navigate({ to: "/order/$orderId", params: { orderId: created.id } });
     },
@@ -484,7 +486,7 @@ export function CheckoutPage() {
                       void applyCoupon(new FormData(event.currentTarget).get("coupon")?.toString() ?? "");
                     }}>
                       <Input name="coupon" placeholder="Código promocional" className="min-h-9 bg-transparent text-xs" />
-                      <Button type="submit" className="min-h-9 text-xs">Aplicar</Button>
+                      <Button type="submit" className="min-h-9 cursor-pointer text-xs">Aplicar</Button>
                     </form>
                   )}
                   {promoError && <p role="alert" className="mt-2 text-xs text-[var(--danger)]">{promoError}</p>}

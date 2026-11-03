@@ -397,7 +397,7 @@ export function CartPage() {
                       placeholder="Digite o código promocional..."
                       className="min-w-0 flex-1 bg-transparent px-2 text-xs text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
                     />
-                    <button type="submit" className="bg-[var(--primary)] px-5 text-sm font-bold text-[var(--background)]">Aplicar</button>
+                    <button type="submit" className="cursor-pointer bg-[var(--primary)] px-5 text-sm font-bold text-[var(--background)]">Aplicar</button>
                   </div>
                   {(couponError || quote.error) && <p role="alert" className="mt-2 text-xs text-[var(--danger)]">{couponError || getApiError(quote.error).message}</p>}
                 </form>

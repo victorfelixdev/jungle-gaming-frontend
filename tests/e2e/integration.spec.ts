@@ -27,6 +27,38 @@ async function submitCheckout(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: 'Confirmar compra' }).filter({ visible: true }).click()
 }
 
+async function restoreAppliedCoupon(page: import('@playwright/test').Page) {
+  await page.evaluate(() => sessionStorage.setItem('kurio:checkout-coupon', 'JUNGLE10'))
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Remover cupom JUNGLE10' }).filter({ visible: true })).toBeVisible()
+}
+
+test('clears the applied coupon after a confirmed purchase', async ({ page }) => {
+  await prepareCheckout(page, 'default')
+  await restoreAppliedCoupon(page)
+  await submitCheckout(page)
+  await expect(page.getByRole('heading', { name: 'Seus NFTs agora estão na sua carteira' })).toBeVisible()
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('kurio:checkout-coupon'))).toBeNull()
+})
+
+test('keeps the coupon while an order is pending and clears it when confirmed', async ({ page }) => {
+  await prepareCheckout(page, 'order-pending')
+  await restoreAppliedCoupon(page)
+  await submitCheckout(page)
+  await expect(page.getByRole('heading', { name: 'Pedido em processamento' })).toBeVisible()
+  expect(await page.evaluate(() => sessionStorage.getItem('kurio:checkout-coupon'))).toBe('JUNGLE10')
+  const orderId = new URL(page.url()).pathname.split('/').pop()
+  await page.evaluate(async (id) => {
+    await fetch(`/api/mock/orders/${id}/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'confirmed' }),
+    })
+  }, orderId)
+  await expect(page.getByRole('heading', { name: 'Seus NFTs agora estão na sua carteira' })).toBeVisible()
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('kurio:checkout-coupon'))).toBeNull()
+})
+
 test('validates the cart coupon through the API and keeps the accepted total', async ({ page }) => {
   await page.goto('/mock')
   await expect(page.getByRole('heading', { name: 'Cenários de demonstração' })).toBeVisible()
@@ -161,11 +193,13 @@ test('keeps later cart additions when a pending order is confirmed', async ({ pa
 
 test('keeps the cart and checkout open after payment is declined', async ({ page }) => {
   await prepareCheckout(page, 'payment-declined')
+  await restoreAppliedCoupon(page)
   await submitCheckout(page)
   await expect(page.getByRole('alert').filter({ visible: true }).first()).toContainText('Pagamento recusado. Seu carrinho foi preservado')
   await expect(page).toHaveURL(/\/checkout$/)
   const count = await page.evaluate(async () => (await (await fetch('/api/cart')).json()).items.length)
   expect(count).toBe(1)
+  expect(await page.evaluate(() => sessionStorage.getItem('kurio:checkout-coupon'))).toBe('JUNGLE10')
 })
 
 test('keeps the cart when the wallet disconnects before creating an order', async ({ page }) => {
