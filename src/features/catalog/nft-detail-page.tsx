@@ -335,7 +335,7 @@ export function NftDetailPage() {
             <h1 className="text-[23px] font-bold leading-tight">{nft.data.name}</h1>
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] pb-2">
               <strong className="text-lg text-[var(--accent)]">{selectedEdition?.price} ETH</strong>
-              <button type="button" onClick={() => setDesktopTab("reviews")} className="flex items-center gap-1 text-[11px]">
+              <button type="button" onClick={() => setDesktopTab("reviews")} className="cursor-pointer flex items-center gap-1 text-[11px]">
                 <span className="flex gap-0.5 text-[var(--accent)]" aria-label="Avaliação 4,8 de 5">
                   {Array.from({ length: 5 }, (_, index) => <Star key={index} size={12} fill="currentColor" />)}
                 </span>
@@ -397,8 +397,8 @@ export function NftDetailPage() {
         </section>
         <section className="mt-14">
           <div className="flex gap-6 border-b border-[var(--border)] text-sm">
-            <button type="button" onClick={() => setDesktopTab("details")} className={`pb-1 ${desktopTab === "details" ? "border-b-2 border-[var(--primary)] text-[var(--accent)]" : ""}`}>Detalhes do NFT</button>
-            <button type="button" onClick={() => setDesktopTab("reviews")} className={`pb-1 ${desktopTab === "reviews" ? "border-b-2 border-[var(--primary)] text-[var(--accent)]" : ""}`}>Avaliações de colecionadores (19)</button>
+            <button type="button" onClick={() => setDesktopTab("details")} className={`pb-1 cursor-pointer ${desktopTab === "details" ? "border-b-2 border-[var(--primary)] text-[var(--accent)]" : ""}`}>Detalhes do NFT</button>
+            <button type="button" onClick={() => setDesktopTab("reviews")} className={`pb-1 cursor-pointer ${desktopTab === "reviews" ? "border-b-2 border-[var(--primary)] text-[var(--accent)]" : ""}`}>Avaliações de colecionadores (19)</button>
           </div>
           {desktopTab === "details" ? (
             <div className="space-y-4 pt-3 text-xs leading-5 text-[var(--muted-foreground)]">
