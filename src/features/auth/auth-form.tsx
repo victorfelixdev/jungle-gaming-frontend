@@ -127,7 +127,7 @@ export function AuthForm({
               className={
                 isLogin
                   ? "font-bold text-[var(--accent)] cursor-pointer"
-                  : "text-[var(--muted-foreground)]"
+                  : "text-[var(--muted-foreground)] cursor-pointer"
               }
             >
               Entrar
@@ -138,7 +138,7 @@ export function AuthForm({
               className={
                 !isLogin
                   ? "font-bold text-[var(--accent)] cursor-pointer"
-                  : "text-[var(--muted-foreground)]"
+                  : "text-[var(--muted-foreground)] cursor-pointer"
               }
             >
               Criar conta
@@ -277,7 +277,7 @@ export function AuthForm({
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword((value) => !value)}
-                className={`absolute right-3 top-1/2 -translate-y-1/2 text-[var(--primary)] ${modal ? "" : "md:hidden"}`}
+                className={`cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-[var(--primary)] ${modal ? "" : "md:hidden"}`}
                 aria-label={showConfirmPassword ? "Ocultar confirmação de senha" : "Mostrar confirmação de senha"}
               >
                 {showConfirmPassword ? <Eye size={15} /> : <EyeOff size={15} />}
@@ -289,7 +289,7 @@ export function AuthForm({
           <button
             type="button"
             disabled
-            className={modal ? "auth-modal-forgot mb-1 text-right text-[var(--primary)]" : "mb-1 text-right text-xs text-[var(--primary)] md:hidden"}
+            className={modal ? "cursor-pointer auth-modal-forgot mb-1 text-right text-[var(--primary)]" : "cursor-pointer mb-1 text-right text-xs text-[var(--primary)] md:hidden"}
           >
             Esqueceu a senha?
           </button>
@@ -302,7 +302,7 @@ export function AuthForm({
         <Button
           type="submit"
           disabled={mutation.isPending}
-          className={modal ? "auth-modal-submit cursor-pointer mt-2 min-h-10 rounded-sm" : "mt-4 min-h-[54px] rounded-[9px] text-sm text-[var(--background)] md:mt-0 md:min-h-10 md:rounded-md md:text-[var(--accent-foreground)]"}
+          className={modal ? "cursor-pointer auth-modal-submit cursor-pointer mt-2 min-h-10 rounded-sm" : "cursor-pointer mt-4 min-h-[54px] rounded-[9px] text-sm text-[var(--background)] md:mt-0 md:min-h-10 md:rounded-md md:text-[var(--accent-foreground)]"}
         >
           {mutation.isPending
             ? "Aguarde..."
