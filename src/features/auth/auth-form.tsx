@@ -70,7 +70,7 @@ export function AuthForm({
           type="button"
           aria-label="Fechar"
           onClick={onClose}
-          className="absolute right-3 top-2 grid size-7 place-items-center text-[var(--primary)] focus-visible:outline-2 focus-visible:outline-[var(--ring)]"
+          className="cursor-pointer absolute right-3 top-2 grid size-7 place-items-center text-[var(--primary)] focus-visible:outline-2 focus-visible:outline-[var(--ring)]"
         >
           <X size={15} strokeWidth={1.5} />
         </button>
@@ -97,7 +97,7 @@ export function AuthForm({
                 onModeChange?.("login");
               }}
               className={
-                isLogin ? "cursor-pointer font-bold text-[var(--primary)]" : "font-bold"
+                isLogin ? "cursor-pointer font-bold text-[var(--primary)]" : "cursor-pointer font-bold"
               }
             >
               Entrar
@@ -113,7 +113,7 @@ export function AuthForm({
                 onModeChange?.("register");
               }}
               className={
-                !isLogin ? "cursor-pointer font-bold text-[var(--primary)]" : "font-bold"
+                !isLogin ? "cursor-pointer font-bold text-[var(--primary)]" : "cursor-pointer font-bold"
               }
             >
               Criar conta
