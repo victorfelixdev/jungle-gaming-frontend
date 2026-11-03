@@ -318,7 +318,7 @@ export function AuthForm({
           <button
             type="button"
             disabled
-            className="flex min-h-9 items-center justify-center gap-2 rounded-sm border border-[var(--border)] text-[var(--muted-foreground)]"
+            className="cursor-pointer flex min-h-9 items-center justify-center gap-2 rounded-sm border border-[var(--border)] text-[var(--muted-foreground)]"
           >
             <img src="/assets/figma/google.svg" alt="" aria-hidden="true" />
             Continuar com Google
@@ -326,7 +326,7 @@ export function AuthForm({
           <button
             type="button"
             disabled
-            className="flex min-h-9 items-center justify-center gap-2 rounded-sm border border-[var(--border)] text-[var(--muted-foreground)]"
+            className="cursor-pointer flex min-h-9 items-center justify-center gap-2 rounded-sm border border-[var(--border)] text-[var(--muted-foreground)]"
           >
             <img src="/assets/figma/facebook.svg" alt="" aria-hidden="true" />
             Continuar com Facebook
